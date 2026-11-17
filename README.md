@@ -4,7 +4,7 @@ A simple English learning website for vocabulary, listening and spoken practice.
 
 ## Features
 
-- Vocabulary cards with pronunciation, meanings, everyday phrases, examples, and spaced review.
+- Vocabulary cards with pronunciation, meanings, everyday phrases, examples, and spaced review. Group by date added and filter by today, recent days, or a specific date.
 - Listening library: 18 lessons, including 10 original human recordings from VOA and ELLLO. Filter by scene, level, source, or speaker origin. See [content attribution](NOTICE.md).
 - Adjustable playback, hidden transcripts, approximate sentence following, word lookup, saved words, cumulative listening time and resume positions.
 - Turn-based voice conversations for daily life, product work, and IELTS warm-ups. Optional Azure pronunciation assessment.
@@ -42,7 +42,7 @@ SQLite stores users, hashed sessions, per-user learning JSON, revisions, and adm
 
 Learning data is fetched from the server for the current account. New learning data is not stored in a shared browser-local collection. Switching accounts clears the visible collection and in-memory caches; server requests use the authenticated user's ID. Revision checks prevent a stale tab from silently overwriting newer data.
 
-The **Account → Import previous browser data** action can move an old local collection into the signed-in account. It downloads a backup of the current account first, requires an explicit import action, and removes the old shared browser collection only after the server confirms the import. Never import another person's collection. JSON backup import/export remains available.
+The **Account → Import previous browser data** action can move an old local collection into the signed-in account. It downloads a backup of the current account first, requires an explicit import action, and removes the old shared browser collection only after the server confirms the import. Never import another person's collection. JSON backup import/export is available under Account → Data backup.
 
 Saving is debounced and shows its status in the header. Failed saves can be retried; conflicting saves offer a local backup before reloading. Listening counts real elapsed playback time, including replays; pauses, stalls and seeking do not add time. A browser process forcibly terminated before the last save may lose the latest few seconds.
 
