@@ -1,0 +1,11 @@
+.git
+node_modules
+.env
+.env.local
+.env.*.local
+.data
+.qa
+*.log
+*.sqlite*
+enrichments.json
+daylight-backup-*.json

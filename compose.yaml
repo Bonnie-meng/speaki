@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env.local
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PUBLIC_ORIGIN: https://speaki.cn
+      DATABASE_PATH: /app/.data/daylight.sqlite
+    volumes:
+      - learning-data:/app/.data
+    expose:
+      - "4173"
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+volumes:
+  learning-data:
+  caddy-data:
+  caddy-config:

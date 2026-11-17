@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+*.log
+daylight-backup-*.json
+.qa/
+.env
+.env.local
+.env.*.local
+
+.data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+enrichments.json

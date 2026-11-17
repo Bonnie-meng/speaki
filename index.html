@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8f3">
+  <meta name="description" content="A quieter space to build your English, one useful expression at a time.">
+  <title>Daylight — Your English space</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="speech.js" defer></script>
+  <script src="voice-utils.js" defer></script>
+  <script src="voice-call.js" defer></script>
+  <script src="listening-library.js" defer></script>
+  <script src="listening-recordings.js" defer></script>
+  <script src="listening.js" defer></script>
+  <script src="learning-state.js" defer></script>
+  <script src="account.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="auth-required auth-loading">
+  <section id="auth-panel" class="auth-panel"><p role="status">Loading your space…</p></section>
+  <aside class="sidebar">
+    <a class="brand" href="#today" aria-label="Daylight home"><span class="brand-mark">✳</span> daylight<span class="brand-dot">.</span></a>
+    <div class="space-label">YOUR ENGLISH SPACE</div>
+    <nav aria-label="Main navigation">
+      <a href="#today" data-nav="today"><span>◷</span> Today</a>
+      <a href="#vocabulary" data-nav="vocabulary"><span>▤</span> Vocabulary <small id="nav-count">8</small></a>
+      <a href="#speaking" data-nav="speaking"><span>◌</span> Speaking</a>
+      <a href="#listening" data-nav="listening"><span><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></span> Listening</a>
+    </nav>
+    <div class="sidebar-footer"><button class="text-button" id="export-data">↗ Export backup</button><label class="text-button import-label">↙ Import backup<input type="file" id="import-data" accept="application/json,.json" hidden></label><span>Saved to your account</span></div>
+  </aside>
+  <main>
+    <header class="topbar"><div id="breadcrumb">Your space <span>/</span> Today</div><div class="top-actions"><button class="sync-status" id="sync-status" type="button" aria-label="Learning data save status"></button><button class="text-button" id="admin-open" type="button" hidden>Users</button><button class="text-button" id="account-open" type="button" hidden>Account</button></div></header>
+    <div id="app"></div>
+
+  </main>
+  <dialog id="word-dialog" aria-labelledby="word-dialog-title"><form id="word-form"><div class="modal-heading"><div><span class="eyebrow">MAKE IT YOURS</span><h2 id="word-dialog-title">Capture a new word</h2></div><button type="button" class="icon-button" data-close aria-label="Close dialog">×</button></div><p class="muted">Add a word and optional context. Save to prepare your learning card.</p><label>Word or expression <input name="word" required maxlength="100" placeholder="e.g. follow up" autocomplete="off"></label><label>Original sentence or context <span class="muted">Optional</span><textarea name="source" rows="3" maxlength="1000" placeholder="Paste the sentence where you found it, if you have one."></textarea></label><details id="word-details-fields"><summary>Learning details · optional, prepared with your assistant</summary><div class="form-row"><label>American IPA<input name="ipa" maxlength="100" placeholder="/ˈfɑːloʊ ʌp/"></label><label>Part of speech<select name="pos"><option value="">Not added yet</option><option>noun</option><option>verb</option><option>adjective</option><option>adverb</option><option>phrasal verb</option><option>expression</option></select></label></div><div class="form-row"><label>Category<select name="category"><option>Everyday</option><option>Product & Work</option><option>IELTS</option></select></label><label>Register<select name="register"><option>Not added yet</option><option>Neutral</option><option>Informal</option><option>Formal</option></select></label></div><label>Simple English meaning<textarea name="meaning" rows="2" maxlength="600" placeholder="Optional — add a short explanation"></textarea></label><label>Chinese meaning <input name="zh" maxlength="400" placeholder="Optional · 中文辅助"></label><label>Common phrases <input name="phrases" maxlength="500" placeholder="Separate phrases with a semicolon ;"></label><label>Example sentence<textarea name="example" rows="2" maxlength="600" placeholder="A sentence you could actually use"></textarea></label></details><div class="modal-actions"><button type="button" class="button secondary" data-close>Cancel</button><button class="button primary" type="submit">Save word ↗</button></div></form><div id="word-save-result" hidden></div></dialog>
+  <dialog id="detail-dialog" aria-label="Word details"></dialog>
+  <dialog id="review-dialog" aria-label="Vocabulary review"></dialog>
+  <dialog id="account-dialog" aria-label="Account"></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

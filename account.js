@@ -1,0 +1,85 @@
+(function(root){
+ const rawFetch=root.fetch.bind(root),escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ let user=null,adapter,revision=0,pending=null,dirty=0,saving=null,saveTimer,pollTimer,epoch=0,mode='login',locked=null,conflict=false,expiresAt=0,leaving=false,applying=false;
+ const requests=new Set(),channel=typeof BroadcastChannel==='function'?new BroadcastChannel('daylight.account'):null;
+ const $=s=>document.querySelector(s);
+ const legacyData=()=>{try{return localStorage.getItem('daylight.english.v1');}catch{return null;}};
+ function apply(data){applying=true;try{adapter.apply(data);}finally{applying=false;}}
+ function status(text,kind=''){const el=$('#sync-status');if(el){el.textContent=text;el.dataset.kind=kind;}}
+ function busy(button,on){button.disabled=on;button.setAttribute('aria-busy',String(on));}
+ function abortRequests(){for(const controller of requests)controller.abort();requests.clear();}
+ async function api(path,options={}){
+  const headers=new Headers(options.headers||{});if(options.body)headers.set('Content-Type','application/json');if(user)headers.set('X-Daylight-Account',user.id);
+  const response=await rawFetch(path,{...options,headers,credentials:'same-origin'});let result;try{result=await response.json();}catch{throw Error('The server could not complete this request.');}
+  if(!response.ok){if(result.code==='SESSION_EXPIRED'||result.code==='ACCOUNT_CHANGED')lock();if(result.code==='PASSWORD_CHANGE_REQUIRED')showPassword(true);throw Object.assign(Error(result.error||'Please try again.'),{status:response.status,code:result.code});}return result;
+ }
+ root.fetch=async function(input,options={}){
+  const url=new URL(typeof input==='string'?input:input.url,location.href);if(url.origin!==location.origin||!url.pathname.startsWith('/api/')||url.pathname.startsWith('/api/auth/'))return rawFetch(input,options);
+  const requestEpoch=epoch,controller=new AbortController(),headers=new Headers(options.headers||{});if(user)headers.set('X-Daylight-Account',user.id);
+  if(options.signal){if(options.signal.aborted)controller.abort();else options.signal.addEventListener('abort',()=>controller.abort(),{once:true});}requests.add(controller);
+  try{const response=await rawFetch(input,{...options,headers,signal:controller.signal,credentials:'same-origin'});if(requestEpoch!==epoch)throw new DOMException('Account changed','AbortError');if(response.status===401){lock();}else if(response.status===428){showPassword(true);}return response;}finally{requests.delete(controller);}
+ };
+ function guest(message=''){
+  clearTimeout(saveTimer);clearInterval(pollTimer);epoch++;abortRequests();leaving=true;
+  adapter?.stop();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());user=null;pending=null;dirty=0;revision=0;conflict=false;adapter&&apply(adapter.fresh());leaving=false;
+  document.body.classList.add('auth-required');document.body.classList.remove('auth-loading');$('#app').innerHTML='';$('#account-open').hidden=true;$('#admin-open').hidden=true;status('');showLogin(message);
+ }
+ function lock(){if(!user)return;const owner=user.id;adapter?.stop();locked={id:owner,data:structuredClone(adapter.read()),revision};guest('Your session has expired. Please sign in again.');channel?.postMessage({type:'expired'});}
+ function showLogin(message=''){
+  const host=$('#auth-panel');host.hidden=false;host.innerHTML=`<div class="auth-brand"><span>✳</span> daylight.</div><h1>${mode==='register'?'Create your account':'Welcome back'}</h1><p class="auth-intro">Your English, one day at a time.</p><div class="auth-tabs"><button type="button" data-auth-mode="login" class="${mode==='login'?'active':''}">Sign in</button><button type="button" data-auth-mode="register" class="${mode==='register'?'active':''}">Create account</button></div><form id="auth-form"><label>Phone number<div class="phone-input"><span>+86</span><input name="phone" type="tel" inputmode="numeric" autocomplete="username" pattern="1[3-9][0-9]{9}" maxlength="11" placeholder="11-digit mobile number" required></div></label><label>Password<input name="password" type="password" autocomplete="${mode==='register'?'new-password':'current-password'}" minlength="${mode==='register'?'10':'1'}" maxlength="128" placeholder="${mode==='register'?'At least 10 characters':'Your password'}" required></label>${mode==='register'?'<label>Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><p class="auth-note">Mainland China numbers only. No SMS verification.</p>':''}<p class="auth-error" id="auth-error" role="alert">${escape(message)}</p><button class="button primary auth-submit" type="submit">${mode==='register'?'Create account':'Sign in'}</button>${mode==='login'?'<button class="text-button auth-forgot" type="button" id="auth-forgot">Forgot password?</button>':''}</form><p class="auth-footer">Your sign-in lasts 7 days.</p>`;
+  host.querySelectorAll('[data-auth-mode]').forEach(button=>button.onclick=()=>{mode=button.dataset.authMode;showLogin();});
+  const forgot=$('#auth-forgot');if(forgot)forgot.onclick=()=>$('#auth-error').textContent='Please contact your administrator to reset your password.';
+  $('#auth-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type=submit]'),data=Object.fromEntries(new FormData(form));if(mode==='register'&&data.password!==data.confirm){$('#auth-error').textContent='The passwords do not match.';return;}busy(button,true);$('#auth-error').textContent='';try{const session=await api('/api/auth/'+(mode==='register'?'register':'login'),{method:'POST',body:JSON.stringify({phone:'+86'+data.phone,password:data.password})});await activate(session);}catch(error){$('#auth-error')&&($('#auth-error').textContent=error.message);}finally{if(button.isConnected)busy(button,false);}};
+ }
+ async function activate(session){
+  user=session.user;expiresAt=session.expiresAt;epoch++;abortRequests();pending=null;dirty=0;conflict=false;document.body.classList.remove('auth-loading');
+  if(user.mustChangePassword){showPassword(true);return;}
+  const accountEpoch=epoch;status('Loading…');
+  const saved=await api('/api/account/state');if(epoch!==accountEpoch||saved.userId!==user?.id)return;
+  revision=saved.revision;let data=saved.data||adapter.fresh();adapter.validate(data);
+  if(locked?.id===user.id&&locked.revision===revision){data=locked.data;locked=null;}
+  apply(data);document.body.classList.remove('auth-required');$('#auth-panel').hidden=true;$('#account-open').hidden=false;$('#admin-open').hidden=user.role!=='admin';$('#account-open').textContent='Account';status('Saved');
+  if(!saved.data||data!==saved.data)schedule(data);
+  channel?.postMessage({type:'signed-in',id:user.id});clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const session=await api('/api/auth/me');if(!session.user||session.user.id!==user?.id||Date.now()>=expiresAt)lock();}catch{}},30000);
+ }
+ function schedule(data){if(!user||leaving||applying||user.mustChangePassword)return;pending=JSON.stringify(data);dirty++;status(conflict?'Changed elsewhere · keep backup & reload':'Saving…',conflict?'conflict':'');clearTimeout(saveTimer);if(!conflict)saveTimer=setTimeout(()=>flush(),600);}
+ async function flush(keepalive=false){
+  if(!user||!pending||conflict||leaving)return;if(saving)return saving;
+  const id=user.id,requestEpoch=epoch,version=dirty,snapshot=pending,body=JSON.stringify({accountId:id,revision,data:JSON.parse(snapshot)});
+  const job=(async()=>{try{const result=await api('/api/account/state',{method:'PUT',body,keepalive:keepalive&&body.length<60000});if(epoch!==requestEpoch||user?.id!==id)return;revision=result.revision;if(dirty===version){pending=null;status('Saved');}else status('Saving…');}catch(error){if(epoch!==requestEpoch)return;if(error.code==='STATE_CONFLICT'){conflict=true;status('Changed elsewhere · keep backup & reload','conflict');}else{status('Not saved · retry','error');}}})();saving=job;
+  try{await job;}finally{if(saving===job)saving=null;if(user?.id===id&&pending&&dirty!==version&&!conflict){clearTimeout(saveTimer);saveTimer=setTimeout(()=>flush(),100);}}
+ }
+ function download(data){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='daylight-learning-backup.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function accountView(message=''){
+  if(!user)return;const dialog=$('#account-dialog');dialog.innerHTML=`<div class="modal-heading"><h2>Your account</h2><button class="icon-button" data-close-account aria-label="Close account">×</button></div><p class="account-phone">${escape(user.phone)}</p><p class="muted">Your learning data is saved to this account.</p><p class="auth-error" role="alert">${escape(message)}</p><button class="button secondary" id="change-password">Change password</button>${legacyData()?'<button class="text-button legacy-import" id="import-legacy">Import previous browser data</button>':''}<div class="modal-actions"><button class="button secondary" id="sign-out">Sign out</button></div>`;dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();$('#change-password').onclick=()=>showPassword(false);$('#sign-out').onclick=logout;
+  const legacy=$('#import-legacy');if(legacy)legacy.onclick=()=>legacyPreview();if(!dialog.open)dialog.showModal();
+ }
+ function legacyPreview(){
+  let data;try{data=JSON.parse(legacyData());adapter.validate(data);}catch{accountView('The old browser data could not be read. You can still import a backup.');return;}
+  const dialog=$('#account-dialog');dialog.innerHTML=`<div class="modal-heading"><h2>Import previous learning</h2><button class="icon-button" data-close-account aria-label="Close account">×</button></div><p>Import ${data.words.length} words and your previous practice records into ${escape(user.phone)}?</p><p class="muted">This replaces this account’s current collection. A backup of the current collection will download first.</p><p class="auth-error" role="alert"></p><div class="modal-actions"><button class="button secondary" id="legacy-cancel">Cancel</button><button class="button primary" id="legacy-confirm">Back up & import</button></div>`;
+  dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();$('#legacy-cancel').onclick=()=>accountView();$('#legacy-confirm').onclick=async()=>{const button=$('#legacy-confirm');busy(button,true);try{adapter.stop();await settle();if(pending)throw Error('Save the current collection before importing.');download(adapter.read());const result=await api('/api/account/state',{method:'PUT',body:JSON.stringify({accountId:user.id,revision,data})});revision=result.revision;apply(data);localStorage.removeItem('daylight.english.v1');accountView('Your previous learning has been imported.');status('Saved');}catch(error){dialog.querySelector('[role=alert]').textContent=error.message;busy(button,false);}};
+ }
+ async function settle(){if(saving)await saving;await flush();}
+ async function logout(){
+  adapter.stop();await settle();if(pending){accountView('Your latest changes have not been saved. Please retry before signing out.');return;}try{await api('/api/auth/logout',{method:'POST',body:'{}'});locked=null;guest();channel?.postMessage({type:'signed-out'});}catch(error){accountView(error.message);}
+ }
+ function showPassword(required){
+  const host=required?$('#auth-panel'):$('#account-dialog');if(required){document.body.classList.add('auth-required');$('#app').innerHTML='';host.hidden=false;}else if(!host.open)host.showModal();
+  host.innerHTML=`${required?'<div class="auth-brand">✳ daylight.</div>':'<div class="modal-heading"><h2>Change password</h2><button class="icon-button" id="password-close" aria-label="Close account">×</button></div>'}${required?'<h1>Set a new password</h1><p class="auth-intro">Replace the temporary password from your administrator.</p>':''}<form id="password-form"><label>${required?'Temporary':'Current'} password<input name="currentPassword" type="password" autocomplete="current-password" maxlength="128" required></label><label>New password<input name="newPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><label>Confirm new password<input name="confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><p class="auth-error" role="alert"></p><button class="button primary" type="submit">Save new password</button></form>`;
+  const close=$('#password-close');if(close)close.onclick=()=>host.close();$('#password-form').onsubmit=async event=>{event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget)),button=event.currentTarget.querySelector('[type=submit]'),error=host.querySelector('[role=alert]');if(data.newPassword!==data.confirm){error.textContent='The passwords do not match.';return;}busy(button,true);try{if(!required){adapter.stop();await settle();if(pending)throw Error('Save your latest changes before changing your password.');}const session=await api('/api/auth/password',{method:'POST',body:JSON.stringify(data)});if(!required)host.close();await activate(session);}catch(e){error.textContent=e.message;}finally{if(button.isConnected)busy(button,false);}};
+ }
+ async function adminView(){
+  const dialog=$('#account-dialog');dialog.innerHTML='<p role="status">Loading users…</p>';if(!dialog.open)dialog.showModal();
+  try{const {users}=await api('/api/admin/users');dialog.innerHTML=`<div class="modal-heading"><h2>Users <small>${users.length}</small></h2><button class="icon-button" data-close-account aria-label="Close users">×</button></div><p class="muted">Passwords are never displayed. Resetting signs the user out and gives them a temporary password.</p><div class="admin-users">${users.map(item=>`<div class="admin-user"><div><strong>${escape(item.phone)}</strong><small>${escape(item.role)} · Joined ${new Date(item.createdAt).toLocaleDateString()}${item.mustChangePassword?' · Password change required':''}</small></div><button class="button secondary" data-reset-user="${escape(item.id)}" data-phone="${escape(item.phone)}" ${item.id===user.id?'disabled':''}>Reset password</button></div>`).join('')}</div>`;dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();dialog.querySelectorAll('[data-reset-user]').forEach(button=>button.onclick=()=>confirmReset(button.dataset.resetUser,button.dataset.phone));}catch(error){dialog.innerHTML=`<p role="alert">${escape(error.message)}</p><button class="button secondary" data-close-account>Close</button>`;dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();}
+ }
+ function confirmReset(id,phone){
+  const dialog=$('#account-dialog');dialog.innerHTML=`<h2>Reset password</h2><p>Generate a temporary password for ${escape(phone)}? This will end their current sign-ins.</p><p class="auth-error" role="alert"></p><div class="modal-actions"><button class="button secondary" id="reset-cancel">Cancel</button><button class="button primary" id="reset-confirm">Reset password</button></div>`;$('#reset-cancel').onclick=adminView;$('#reset-confirm').onclick=async()=>{const button=$('#reset-confirm');busy(button,true);try{const result=await api('/api/admin/users/'+id+'/reset-password',{method:'POST',body:'{}'});dialog.innerHTML=`<h2>Temporary password</h2><p>For ${escape(phone)}</p><code class="temporary-password">${escape(result.temporaryPassword)}</code><p class="muted">Share it directly with the user. They must choose a new password when they sign in.</p><button class="button secondary" id="reset-done">Done</button>`;$('#reset-done').onclick=adminView;}catch(error){dialog.querySelector('[role=alert]').textContent=error.message;busy(button,false);}};
+ }
+ async function start(config){
+  adapter=config;$('#account-open').onclick=()=>accountView();$('#admin-open').onclick=adminView;$('#sync-status').onclick=async()=>{if(conflict){adapter.stop();download(adapter.read());pending=null;conflict=false;try{await activate({user,expiresAt});}catch{status('Could not reload · retry','error');}}else flush();};
+  channel&&(channel.onmessage=event=>{if(event.data.type==='signed-out'||event.data.type==='signed-in'&&user&&event.data.id!==user.id)guest('Please sign in to continue.');});
+  try{const session=await api('/api/auth/me');if(session.user)await activate(session);else guest();}catch{guest('Could not connect to the server. Please try again.');}
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&user){adapter.sample?.();flush(true);}});
+ }
+ root.DaylightAccount={get user(){return user;},start,schedule,flush,logout};
+})(globalThis);
