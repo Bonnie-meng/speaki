@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {createAccountStore,normalizePhone,SESSION_MS} from './accounts.mjs';
+import {createAccountStore,normalizePhone,validatePassword,SESSION_MS} from './accounts.mjs';
 import {createAppServer} from './server.mjs';
-const password='test-only-password-A1';
+const password='TestA123';
 const state=word=>({version:1,words:[{id:'example',word,category:'Everyday',status:'new',phrases:[],due:'2026-11-17',reviews:0,ipa:'',pos:'noun',register:'Neutral',meaning:'A private test word',zh:'',example:'',source:'Private test',createdAt:'2026-11-17'}],activity:{},drafts:{meeting:'Private speaking notes'},focus:{day:'2026-11-17',seconds:0},listening:{}});
 const cookie=response=>response.headers.get('set-cookie').split(';')[0];
 async function setup(run,options={}){
@@ -15,6 +15,10 @@ async function setup(run,options={}){
  const request=(route,{method='GET',body,session,headers={}}={})=>fetch(base+route,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(session?{Cookie:session}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});
  try{await run({store,request});}finally{await new Promise(resolve=>server.close(resolve));}
 }
+test('new passwords accept exactly 6–8 ASCII letters or numbers',()=>{
+ for(const value of ['123456','abcdef','Ab12cd3','ABCD1234'])assert.equal(validatePassword(value),value);
+ for(const value of ['',null,123456,'abc12','abcdefghi','abc 123','Abc_123','密码123456'])assert.throws(()=>validatePassword(value));
+});
 test('mainland phone identifiers are normalized and unsupported numbers rejected',()=>{
  assert.equal(normalizePhone('13800000001'),'+8613800000001');assert.equal(normalizePhone('+86 138-0000-0001'),'+8613800000001');
  for(const phone of ['+12125551234','+85212345678','12800000001','1380000000',null,"13800000001' OR 1=1"])assert.throws(()=>normalizePhone(phone));
@@ -49,10 +53,10 @@ test('admin reset is restricted, revokes old sessions and requires a new passwor
   assert.equal((await request('/api/admin/users',{session:userCookie})).status,403);store.promote('13800000001');
   const users=await (await request('/api/admin/users',{session:adminCookie})).json();assert.equal(users.users.length,2);assert.ok(users.users.every(u=>!('password_hash' in u)));
   const resetPath='/api/admin/users/'+user.id+'/reset-password';assert.equal((await request(resetPath,{method:'POST',session:userCookie,body:{}})).status,403);
-  const reset=await (await request(resetPath,{method:'POST',session:adminCookie,body:{}})).json();assert.ok(reset.temporaryPassword);assert.equal((await (await request('/api/auth/me',{session:userCookie})).json()).user,null);
+  const reset=await (await request(resetPath,{method:'POST',session:adminCookie,body:{}})).json();assert.match(reset.temporaryPassword,/^[A-Za-z0-9]{8}$/);assert.equal((await (await request('/api/auth/me',{session:userCookie})).json()).user,null);
   const temporary=await request('/api/auth/login',{method:'POST',body:{phone:'13800000002',password:reset.temporaryPassword}}),temporaryCookie=cookie(temporary);assert.equal((await temporary.json()).user.mustChangePassword,true);
   assert.equal((await request('/api/account/state',{session:temporaryCookie})).status,428);
-  const changed=await request('/api/auth/password',{method:'POST',session:temporaryCookie,body:{currentPassword:reset.temporaryPassword,newPassword:'new-test-password-B2'}});assert.equal(changed.status,200);assert.equal((await changed.json()).user.mustChangePassword,false);assert.equal((await request('/api/account/state',{session:cookie(changed)})).status,200);
+  const changed=await request('/api/auth/password',{method:'POST',session:temporaryCookie,body:{currentPassword:reset.temporaryPassword,newPassword:'NewB123'}});assert.equal(changed.status,200);assert.equal((await changed.json()).user.mustChangePassword,false);assert.equal((await request('/api/account/state',{session:cookie(changed)})).status,200);
   assert.equal((await request('/api/auth/login',{method:'POST',body:{phone:'13800000002',password:reset.temporaryPassword}})).status,401);
  });
 });

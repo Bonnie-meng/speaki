@@ -24,7 +24,7 @@ npm run dev
 
 Add your API credentials to `.env.local` locally. Do not commit credentials. Open http://127.0.0.1:4173, then register an account. Recordings and account storage work without an AI key; generated word cards, voice calls, and generated speech need the relevant service credentials. AI usage is billed by the provider.
 
-Phone identifiers accept only mainland China mobile numbers. Passwords require 10–128 characters. The sign-in cookie is HttpOnly, SameSite=Lax and expires after seven days; public deployment requires HTTPS and adds Secure cookies.
+Phone identifiers accept only mainland China mobile numbers. New passwords require 6–8 letters or numbers (A–Z, a–z, 0–9). Existing passwords still work at sign-in. The sign-in cookie is HttpOnly, SameSite=Lax and expires after seven days; public deployment requires HTTPS and adds Secure cookies.
 
 ## Administrator setup
 
