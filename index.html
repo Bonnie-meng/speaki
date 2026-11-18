@@ -21,22 +21,24 @@
   <script src="account.js" defer></script>
   <script src="word-library.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="locale.js" defer></script>
 </head>
 <body class="auth-required auth-loading">
+  <div class="auth-language"><button class="language-toggle" data-language-toggle type="button" aria-label="Language / 语言">中文</button></div>
   <section id="auth-panel" class="auth-panel"><p role="status">Loading your space…</p></section>
   <aside class="sidebar">
     <a class="brand" href="#today" aria-label="Speaki · 言芽 home"><img class="brand-symbol" src="assets/brand/speaki-mark.svg" alt="" width="38" height="38"><span class="brand-name"><span class="brand-english">speaki</span></span></a>
     <div class="space-label">YOUR ENGLISH SPACE</div>
     <nav aria-label="Main navigation">
-      <a href="#today" data-nav="today"><span>◷</span> Today</a>
-      <a href="#vocabulary" data-nav="vocabulary"><span>▤</span> Vocabulary <small id="nav-count">8</small></a>
-      <a href="#speaking" data-nav="speaking"><span>◌</span> Speaking</a>
-      <a href="#listening" data-nav="listening"><span><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></span> Listening</a>
+      <a href="#today" data-nav="today"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 6.5V12h5"/></svg></span> Today</a>
+      <a href="#vocabulary" data-nav="vocabulary"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="4" width="15" height="16" rx="2"/><path d="M8 9h8m-8 4h8m-8 4h5"/></svg></span> Vocabulary <small id="nav-count">8</small></a>
+      <a href="#speaking" data-nav="speaking"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0m-7 7v3m-3 0h6"/></svg></span> Speaking</a>
+      <a href="#listening" data-nav="listening"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></span> Listening</a>
     </nav>
     <div class="sidebar-footer"><div class="sidebar-user"><button class="sidebar-identity" id="sidebar-account" type="button" aria-label="Your account"><span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/></svg></span><span class="user-info"><span class="user-status">Signed in</span><span id="sidebar-user-phone"></span></span></button><button class="sidebar-sign-out" id="sidebar-sign-out" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M10 12h10m-4-4 4 4-4 4"/></svg><span>Sign out</span></button></div></div>
   </aside>
   <main>
-    <header class="topbar"><div id="breadcrumb">Your space <span>/</span> Today</div><div class="top-actions"><button class="sync-status" id="sync-status" type="button" aria-label="Learning data save status" aria-live="polite" hidden></button><button class="text-button" id="admin-open" type="button" hidden>Users</button><button class="account-trigger" id="account-open" type="button" aria-label="Your account" title="Your account" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/></svg></button></div></header>
+    <header class="topbar"><div id="breadcrumb">Your space <span>/</span> Today</div><div class="top-actions"><button class="language-toggle" data-language-toggle type="button" aria-label="Language / 语言">中文</button><button class="sync-status" id="sync-status" type="button" aria-label="Learning data save status" aria-live="polite" hidden></button><button class="text-button" id="admin-open" type="button" hidden>Users</button><button class="account-trigger" id="account-open" type="button" aria-label="Your account" title="Your account" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/></svg></button></div></header>
     <div id="app"></div>
 
   </main>

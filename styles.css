@@ -474,3 +474,8 @@ nav a{color:var(--muted)}nav a:hover{background:#EBEEEA}nav a.active,.filter.act
  .word-detail-actions>[data-edit]{grid-column:1;grid-row:2}
  .word-detail-actions>[data-delete]{grid-column:1;grid-row:3}
 }
+
+.language-toggle{flex:none;min-width:44px;min-height:36px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);color:var(--ink);font-size:12px}
+.auth-language{position:fixed;inset-block-start:max(12px,env(safe-area-inset-top));inset-inline-end:16px;z-index:15}
+.auth-language:has(+[hidden]){display:none}
+@media(max-width:650px){.top-actions:has(.language-toggle){gap:8px}}
