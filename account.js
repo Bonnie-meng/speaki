@@ -5,7 +5,7 @@
  const $=s=>document.querySelector(s);
  const legacyData=()=>{try{return localStorage.getItem('daylight.english.v1');}catch{return null;}};
  function apply(data){applying=true;try{adapter.apply(data);}finally{applying=false;}}
- function status(text,kind=''){const el=$('#sync-status');if(el){el.textContent=text;el.dataset.kind=kind;}}
+ function status(text,kind=''){const el=$('#sync-status');if(el){el.textContent=text;el.dataset.kind=kind;el.hidden=!['error','conflict'].includes(kind);}}
  function updateIdentity(){const label=$('#sidebar-user-phone');if(label)label.textContent=user?.phone||'';}
  function busy(button,on){button.disabled=on;button.setAttribute('aria-busy',String(on));}
  function abortRequests(){for(const controller of requests)controller.abort();requests.clear();}
@@ -39,7 +39,7 @@
   const saved=await api('/api/account/state');if(epoch!==accountEpoch||saved.userId!==user?.id)return;
   revision=saved.revision;let data=saved.data||adapter.fresh();adapter.validate(data);
   if(locked?.id===user.id&&locked.revision===revision){data=locked.data;locked=null;}
-  apply(data);updateIdentity();document.body.classList.remove('auth-required');$('#auth-panel').hidden=true;$('#account-open').hidden=false;$('#admin-open').hidden=user.role!=='admin';$('#account-open').textContent='Account';status('Saved');
+  apply(data);updateIdentity();document.body.classList.remove('auth-required');$('#auth-panel').hidden=true;$('#account-open').hidden=false;$('#admin-open').hidden=user.role!=='admin';status('Saved');
   if(!saved.data||data!==saved.data)schedule(data);
   channel?.postMessage({type:'signed-in',id:user.id});clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const session=await api('/api/auth/me');if(!session.user||session.user.id!==user?.id||Date.now()>=expiresAt)lock();}catch{}},30000);
  }
@@ -52,7 +52,7 @@
  }
  function download(data){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='daylight-learning-backup.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  function accountView(message=''){
-  if(!user)return;const dialog=$('#account-dialog');dialog.innerHTML=`<div class="modal-heading"><h2>Your account</h2><button class="icon-button" data-close-account aria-label="Close account">×</button></div><p class="account-phone">${escape(user.phone)}</p><p class="muted">Your learning data is saved to this account.</p><p class="auth-error" role="alert">${escape(message)}</p><button class="button secondary" id="change-password">Change password</button>${legacyData()?'<button class="text-button legacy-import" id="import-legacy">Import previous browser data</button>':''}<details class="account-backup"><summary>Data backup</summary><p>Download a copy of your learning data, or restore a saved backup.</p><div class="account-backup-actions"><button class="text-button" data-action="export" type="button">Export backup</button><button class="text-button" data-action="import" type="button">Import backup</button></div></details><div class="modal-actions"><button class="button secondary" id="sign-out">Sign out</button></div>`;dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();$('#change-password').onclick=()=>showPassword(false);$('#sign-out').onclick=logout;
+  if(!user)return;const dialog=$('#account-dialog');dialog.innerHTML=`<div class="modal-heading"><h2>Your account</h2><button class="icon-button" data-close-account aria-label="Close account">×</button></div><div class="account-summary"><span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/></svg></span><div><span class="account-caption">Signed in</span><p class="account-phone">${escape(user.phone)}</p></div></div><p class="auth-error" role="alert" ${message?'':'hidden'}>${escape(message)}</p><div class="account-actions"><button class="button secondary" id="change-password">Change password</button></div><details class="account-backup"><summary>Data backup</summary><p>Download a copy of your learning data, or restore a saved backup.</p>${legacyData()?'<button class="button secondary legacy-import" id="import-legacy">Import previous browser data</button>':''}<div class="account-backup-actions"><button class="text-button" data-action="export" type="button">Export backup</button><button class="text-button" data-action="import" type="button">Import backup</button></div></details><div class="modal-actions"><button class="button secondary" id="sign-out">Sign out</button></div>`;dialog.querySelector('[data-close-account]').onclick=()=>dialog.close();$('#change-password').onclick=()=>showPassword(false);$('#sign-out').onclick=logout;
   const legacy=$('#import-legacy');if(legacy)legacy.onclick=()=>legacyPreview();if(!dialog.open)dialog.showModal();
  }
  function legacyPreview(){

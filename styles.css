@@ -356,3 +356,10 @@ body.auth-required{min-height:100dvh;display:grid;place-items:center;padding:32p
   dialog, #account-dialog { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px); }
   body.auth-required { padding-top: max(32px,env(safe-area-inset-top)); padding-bottom: max(32px,env(safe-area-inset-bottom)); }
 }
+
+/* Keep routine sync quiet and account controls compact. */
+#account-open{border:0;background:#e8eedf;color:#718760;border-radius:50%;width:44px;height:44px;padding:10px;place-items:center;flex-shrink:0;cursor:pointer}
+#account-open svg{width:23px;height:23px}#account-open:hover{background:#dfe8d5}
+.account-summary{display:flex;align-items:center;gap:14px;margin:24px 0}.account-summary .user-avatar{width:46px;height:46px}.account-summary .user-avatar svg{width:26px;height:26px}.account-caption{font-size:11px;color:#92a085}.account-summary .account-phone{margin:3px 0 0;font-size:16px;line-height:1.5;overflow-wrap:anywhere}.account-actions{display:grid;gap:12px}.account-actions .button{text-align:left;justify-content:flex-start;width:100%}.account-backup{margin-top:20px}.account-backup .legacy-import{display:block;width:100%;white-space:normal;text-align:left;justify-content:flex-start;margin:14px 0;font-size:12px}.account-backup-actions{flex-wrap:wrap}.account-backup-actions button{min-height:40px}.sync-status[data-kind=error],.sync-status[data-kind=conflict]{max-width:180px;font-size:11px;line-height:1.5}
+@media(max-width:767px){#account-open{display:grid}.account-summary{margin:22px 0}.account-summary .account-phone{font-size:17px}.account-caption{font-size:12px}.account-actions .button,.account-backup .legacy-import{min-height:46px;font-size:15px}.account-backup{padding-top:16px}.account-backup summary{min-height:40px;font-size:14px}.account-backup p{font-size:13px}.sync-status[data-kind=error],.sync-status[data-kind=conflict]{display:block;max-width:120px;font-size:11px}.top-actions{gap:10px}}
+@media(max-width:359px){.sync-status[data-kind=error],.sync-status[data-kind=conflict]{max-width:100px}}
