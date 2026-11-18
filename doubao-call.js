@@ -1,11 +1,12 @@
 (function(root){
+ const playbackNotice='This reply could not play. Read the transcript or keep talking.';
  class DoubaoCall{
   constructor(call){this.call=call;this.sources=new Set();this.generation=0;this.nextAt=0;this.closed=false;this.ready=false;this.inputIndex=null;this.outputIndex=null;this.feedbackSequence=0;}
   async start(stream,context){
    this.context=context;this.stream=stream;
    const url=new URL('/api/voice/realtime',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';url.searchParams.set('scenario',this.call.scenario);
    const socket=this.socket=new WebSocket(url);this.startTimer=setTimeout(()=>this.fail('The voice connection took too long. Please call again.'),18000);
-   socket.onmessage=e=>{if(this.closed)return;try{this.event(JSON.parse(e.data));}catch{this.fail('The voice response could not play. Please call again.');}};
+   socket.onmessage=e=>{if(this.closed)return;let event;try{event=JSON.parse(e.data);}catch{return;}if(event&&typeof event.type==='string')this.event(event);};
    socket.onerror=()=>this.fail('Could not connect to Doubao. Please check the service connection and call again.');
    socket.onclose=()=>{if(!this.closed)this.fail('The voice connection ended. Please call again.');};
    this.source=context.createMediaStreamSource(stream);this.recorder=new AudioWorkletNode(context,'speaki-realtime-recorder');
@@ -29,8 +30,13 @@
     if(this.outputIndex===null){this.outputIndex=call.messages.length;call.messages.push({role:'assistant',content:''});}
     const message=call.messages[this.outputIndex];if(event.type==='assistant.text'&&message.fromAudio)return;if(event.text)message.content=(event.type==='assistant.done'?event.text:message.content+event.text).slice(0,12000);call.paint();
    }
-   if(event.type==='audio.started'){this.playbackBlocked=false;if(event.text&&this.outputIndex===null){this.outputIndex=call.messages.length;call.messages.push({role:'assistant',content:event.text,fromAudio:true});call.paint();}}
-   if(event.type==='audio'&&!this.playbackBlocked){this.play(event.audio);}
+   if(event.type==='audio.started'){this.playbackBlocked=false;this.playbackFailed=false;if(call.error===playbackNotice)call.error='';if(event.text&&this.outputIndex===null){this.outputIndex=call.messages.length;call.messages.push({role:'assistant',content:event.text,fromAudio:true});call.paint();}}
+   if(event.type==='audio'&&!this.playbackBlocked&&!this.playbackFailed){
+    try{this.play(event.audio);}catch{
+     this.playbackFailed=true;this.stopAudio();call.error=playbackNotice;
+     call.status=call.muted?'muted':'listening';call.paint();
+    }
+   }
    if(event.type==='audio.done'){this.outputIndex=null;this.inputIndex=null;if(!this.sources.size){call.status=call.muted?'muted':'listening';call.paint();}}
    if(event.type==='interrupted'){this.stopAudio();call.status=call.muted?'muted':'listening';call.paint();}
    if(event.type==='recognition.failed'){this.inputIndex=null;call.error='That turn was not clear. Please try again.';call.status=call.muted?'muted':'listening';call.paint();}
@@ -43,7 +49,7 @@
    catch{if(!this.closed&&epoch===call.epoch&&sequence===this.feedbackSequence){call.feedback={unavailable:true};call.paint();}}
   }
   play(base64){
-   const raw=atob(base64);if(raw.length%2||raw.length>300000)throw Error('Invalid PCM');
+   const raw=atob(base64);if(!raw.length||raw.length%2||raw.length>300000)throw Error('Invalid PCM');
    if(this.nextAt-this.context.currentTime>12)throw Error('Playback too far behind');
    const buffer=this.context.createBuffer(1,raw.length/2,24000),samples=buffer.getChannelData(0);
    for(let i=0;i<samples.length;i++){let value=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);if(value>=32768)value-=65536;samples[i]=value/32768;}

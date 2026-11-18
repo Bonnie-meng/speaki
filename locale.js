@@ -154,6 +154,7 @@
   'Hear your last recording':'播放上一次录音','Words to revisit':'建议复习的词',
   'Close account':'关闭账号窗口','Close dialog':'关闭窗口','Account':'账号','Main navigation':'主导航'
  }))labels.set(key,value);
+ labels.set('This reply could not play. Read the transcript or keep talking.','这条回复没能播放。你可以看文字记录，或继续说话。');
  let language='en';
  try { language=localStorage.getItem('speaki-ui-language')==='zh'?'zh':'en'; } catch {}
  const originals=new WeakMap();
