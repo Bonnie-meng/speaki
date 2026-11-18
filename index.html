@@ -3,24 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f8f3">
-  <meta name="description" content="A quieter space to build your English, one useful expression at a time.">
-  <title>Daylight — Your English space</title>
+  <meta name="theme-color" content="#F8F8F6">
+  <meta name="description" content="Speaki · 言芽. Let your English grow through everyday vocabulary, listening and conversation.">
+  <title>Speaki · 言芽 — Let your English grow</title>
+  <link rel="icon" type="image/svg+xml" href="assets/brand/speaki-mark.svg">
   <link rel="stylesheet" href="styles.css">
+  <script src="select-controls.js" defer></script>
   <script src="speech.js" defer></script>
   <script src="voice-utils.js" defer></script>
+  <script src="doubao-call.js" defer></script>
   <script src="voice-call.js" defer></script>
   <script src="listening-library.js" defer></script>
   <script src="listening-recordings.js" defer></script>
   <script src="listening.js" defer></script>
+  <script src="library-progress.js" defer></script>
   <script src="learning-state.js" defer></script>
   <script src="account.js" defer></script>
+  <script src="word-library.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body class="auth-required auth-loading">
   <section id="auth-panel" class="auth-panel"><p role="status">Loading your space…</p></section>
   <aside class="sidebar">
-    <a class="brand" href="#today" aria-label="Daylight home"><span class="brand-mark">✳</span> daylight<span class="brand-dot">.</span></a>
+    <a class="brand" href="#today" aria-label="Speaki · 言芽 home"><img class="brand-symbol" src="assets/brand/speaki-mark.svg" alt="" width="38" height="38"><span class="brand-name"><span class="brand-english">speaki</span></span></a>
     <div class="space-label">YOUR ENGLISH SPACE</div>
     <nav aria-label="Main navigation">
       <a href="#today" data-nav="today"><span>◷</span> Today</a>
@@ -35,10 +40,10 @@
     <div id="app"></div>
 
   </main>
-  <dialog id="word-dialog" aria-labelledby="word-dialog-title"><form id="word-form"><div class="modal-heading"><div><span class="eyebrow">MAKE IT YOURS</span><h2 id="word-dialog-title">Capture a new word</h2></div><button type="button" class="icon-button" data-close aria-label="Close dialog">×</button></div><p class="muted">Add a word and optional context. Save to prepare your learning card.</p><label>Word or expression <input name="word" required maxlength="100" placeholder="e.g. follow up" autocomplete="off"></label><label>Original sentence or context <span class="muted">Optional</span><textarea name="source" rows="3" maxlength="1000" placeholder="Paste the sentence where you found it, if you have one."></textarea></label><details id="word-details-fields"><summary>Learning details · optional, prepared with your assistant</summary><div class="form-row"><label>American IPA<input name="ipa" maxlength="100" placeholder="/ˈfɑːloʊ ʌp/"></label><label>Part of speech<select name="pos"><option value="">Not added yet</option><option>noun</option><option>verb</option><option>adjective</option><option>adverb</option><option>phrasal verb</option><option>expression</option></select></label></div><div class="form-row"><label>Category<select name="category"><option>Everyday</option><option>Product & Work</option><option>IELTS</option></select></label><label>Register<select name="register"><option>Not added yet</option><option>Neutral</option><option>Informal</option><option>Formal</option></select></label></div><label>Simple English meaning<textarea name="meaning" rows="2" maxlength="600" placeholder="Optional — add a short explanation"></textarea></label><label>Chinese meaning <input name="zh" maxlength="400" placeholder="Optional · 中文辅助"></label><label>Common phrases <input name="phrases" maxlength="500" placeholder="Separate phrases with a semicolon ;"></label><label>Example sentence<textarea name="example" rows="2" maxlength="600" placeholder="A sentence you could actually use"></textarea></label></details><div class="modal-actions"><button type="button" class="button secondary" data-close>Cancel</button><button class="button primary" type="submit">Save word ↗</button></div></form><div id="word-save-result" hidden></div></dialog>
+  <dialog id="word-dialog" aria-labelledby="word-dialog-title"><form id="word-form"><div class="modal-heading"><div><h2 id="word-dialog-title">Add a word</h2></div><button type="button" class="icon-button" data-close aria-label="Close dialog">×</button></div><label>Word or expression <input name="word" required maxlength="100" placeholder="e.g. follow up" autocomplete="off"></label><label>Original sentence or context <span class="muted">Optional</span><textarea name="source" rows="3" maxlength="1000" placeholder="Paste the sentence where you found it, if you have one."></textarea></label><details id="word-details-fields"><summary>Edit learning details</summary><div class="form-row"><label>American IPA<input name="ipa" maxlength="100" placeholder="/ˈfɑːloʊ ʌp/"></label><label>Part of speech<select name="pos"><option value="">Not added yet</option><option>noun</option><option>verb</option><option>adjective</option><option>adverb</option><option>phrasal verb</option><option>expression</option><option>pronoun</option><option>preposition</option><option>determiner</option><option>conjunction</option><option>number</option><option value="modal auxiliary">modal verb</option><option value="be-verb">auxiliary verb · be</option><option value="do-verb">auxiliary verb · do</option><option value="have-verb">auxiliary verb · have</option><option value="infinitive-to">infinitive marker</option><option>interjection</option><option>auxiliary verb</option></select></label></div><div class="form-row"><label>Category<select name="category"><option>Everyday</option><option>Product & Work</option><option>IELTS</option></select></label><label>Register<select name="register"><option>Not added yet</option><option>Neutral</option><option>Informal</option><option>Formal</option></select></label></div><label>Simple English meaning<textarea name="meaning" rows="2" maxlength="600" placeholder="Optional — add a short explanation"></textarea></label><label>Chinese meaning <input name="zh" maxlength="400" placeholder="Optional · 中文辅助"></label><label>Common phrases <input name="phrases" maxlength="500" placeholder="Separate phrases with a semicolon ;"></label><label>Example sentence<textarea name="example" rows="2" maxlength="600" placeholder="A sentence you could actually use"></textarea></label></details><div class="modal-actions"><button type="button" class="button secondary" data-close>Cancel</button><button class="button primary" type="submit">Save word ↗</button></div></form><div id="word-save-result" hidden></div></dialog>
   <dialog id="detail-dialog" aria-label="Word details"></dialog>
   <dialog id="review-dialog" aria-label="Vocabulary review"></dialog>
-  <input type="file" id="import-data" accept="application/json,.json" hidden>
+  <dialog id="library-word-dialog" aria-label="Word library learning card"></dialog>
   <dialog id="account-dialog" aria-label="Account"></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

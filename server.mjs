@@ -1,6 +1,8 @@
 import http from 'node:http';
+import {attachDoubaoRealtime,doubaoConfigured} from './doubao-realtime.mjs';
 import {createAccountStore,accountError} from './accounts.mjs';
 import {createAccountHttp} from './accounts-http.mjs';
+import {catalogue,libraryEntry,libraryPrompt} from './word-catalog.mjs';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
@@ -21,7 +23,7 @@ try {
 const categories=['Everyday','Product & Work','IELTS'];
 const fields=['ipa','pos','category','register','meaning','zh','usage','example','prompt','otherMeaning'];
 export const cardSchema={type:'object',additionalProperties:false,properties:{
- ipa:{type:'string'},pos:{type:'string',enum:['noun','verb','adjective','adverb','phrasal verb','expression']},
+ ipa:{type:'string'},pos:{type:'string',enum:['noun','verb','adjective','adverb','phrasal verb','expression','pronoun','preposition','determiner','conjunction','number','modal auxiliary','be-verb','do-verb','have-verb','infinitive-to','interjection','auxiliary verb']},
  category:{type:'string',enum:categories},register:{type:'string',enum:['Neutral','Informal','Formal']},
  meaning:{type:'string'},zh:{type:'string'},usage:{type:'string'},example:{type:'string'},prompt:{type:'string'},otherMeaning:{type:'string'},
  phrases:{type:'array',items:{type:'string'}}
@@ -40,17 +42,18 @@ export function providerConfig(env=process.env){
  throw Object.assign(new Error('The AI provider is not supported. Choose DeepSeek or OpenAI in the server configuration.'),{status:503});
 }
 
-export async function generateCard({word,source},{env=process.env,fetchImpl=fetch}={}){
+export async function generateCard({word,source,level,partOfSpeech},{env=process.env,fetchImpl=fetch}={}){
  const config=providerConfig(env);
  if(!config.key)throw Object.assign(new Error('Automatic word cards need an AI connection. Your word is saved. Configure the server’s API key, then choose Try again.'),{status:503,code:'AI_NOT_CONFIGURED'});
+ const instructions=teachingInstructions+(['A1','A2','B1','B2'].includes(level)?`\nFor this graded public library card, ignore the B1/product-manager/IELTS learner persona above. Write for a general English learner at ${level}; use simple ${level} English in definitions and examples. Teach the most common sense of this word as ${partOfSpeech}; the pos field must be exactly "${partOfSpeech}". Do not change the target part of speech.`: '');
  const isDeepSeek=config.provider==='deepseek';
  const jsonGuide=`Return only a JSON object matching this schema: ${JSON.stringify(cardSchema)}. Every field must be present. phrases must contain 2–3 strings. If the input is not a recognizable English word or expression and no meaning can be established, return only {"error":"Please check the spelling or add the original sentence."} rather than inventing a definition.`;
- const input=JSON.stringify({word,source});
+ const input=JSON.stringify({word,source,...(level?{targetLevel:level}:{}),...(partOfSpeech?{targetPartOfSpeech:partOfSpeech}:{})});
  const body=isDeepSeek?{
-  model:config.model,messages:[{role:'system',content:teachingInstructions+'\n'+jsonGuide},{role:'user',content:input}],
+  model:config.model,messages:[{role:'system',content:instructions+'\n'+jsonGuide},{role:'user',content:input}],
   response_format:{type:'json_object'},thinking:{type:'disabled'},max_tokens:2000,stream:false
  }:{
-  model:config.model,store:false,instructions:teachingInstructions,input,
+  model:config.model,store:false,instructions,input,
   text:{format:{type:'json_schema',name:'english_word_card',strict:true,schema:cardSchema}},max_output_tokens:1600
  };
  const response=await fetchImpl(config.endpoint,{
@@ -71,7 +74,7 @@ export async function generateCard({word,source},{env=process.env,fetchImpl=fetc
  return validateCard(card);
 }
 
-const publicFiles={'/assets/listening/elllo-clothes.mp3':['assets/listening/elllo-clothes.mp3','audio/mpeg'],'/assets/listening/elllo-ice-rink.mp3':['assets/listening/elllo-ice-rink.mp3','audio/mpeg'],'/assets/listening/elllo-new-bike.mp3':['assets/listening/elllo-new-bike.mp3','audio/mpeg'],'/assets/listening/elllo-kangaroo-road.mp3':['assets/listening/elllo-kangaroo-road.mp3','audio/mpeg'],'/assets/listening/elllo-going-to-canada.mp3':['assets/listening/elllo-going-to-canada.mp3','audio/mpeg'],'/assets/listening/elllo-beads-business.mp3':['assets/listening/elllo-beads-business.mp3','audio/mpeg'],'/assets/listening/elllo-canada-intro.mp3':['assets/listening/elllo-canada-intro.mp3','audio/mpeg'],'/assets/listening/elllo-new-restaurant.mp3':['assets/listening/elllo-new-restaurant.mp3','audio/mpeg'],'/listening-recordings.js':['listening-recordings.js','text/javascript; charset=utf-8'],'/assets/listening/voa-bottom-line.m4a':['assets/listening/voa-bottom-line.m4a','audio/mp4'],'/assets/listening/voa-on-the-ball.m4a':['assets/listening/voa-on-the-ball.m4a','audio/mp4'],'/':['index.html','text/html; charset=utf-8'],'/index.html':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/speech.js':['speech.js','text/javascript; charset=utf-8'],'/voice-call.js':['voice-call.js','text/javascript; charset=utf-8'],'/voice-utils.js':['voice-utils.js','text/javascript; charset=utf-8'],'/pcm-recorder.js':['pcm-recorder.js','text/javascript; charset=utf-8'],'/listening.js':['listening.js','text/javascript; charset=utf-8'],'/listening-library.js':['listening-library.js','text/javascript; charset=utf-8'],'/styles.css':['styles.css','text/css; charset=utf-8'],'/learning-state.js':['learning-state.js','text/javascript; charset=utf-8'],'/account.js':['account.js','text/javascript; charset=utf-8']};
+const publicFiles={'/doubao-call.js':['doubao-call.js','text/javascript; charset=utf-8'],'/library-progress.js':['library-progress.js','text/javascript; charset=utf-8'],'/word-library.js':['word-library.js','text/javascript; charset=utf-8'],'/select-controls.js':['select-controls.js','text/javascript; charset=utf-8'],'/assets/brand/speaki-mark.svg':['assets/brand/speaki-mark.svg','image/svg+xml'],'/assets/listening/elllo-clothes.mp3':['assets/listening/elllo-clothes.mp3','audio/mpeg'],'/assets/listening/elllo-ice-rink.mp3':['assets/listening/elllo-ice-rink.mp3','audio/mpeg'],'/assets/listening/elllo-new-bike.mp3':['assets/listening/elllo-new-bike.mp3','audio/mpeg'],'/assets/listening/elllo-kangaroo-road.mp3':['assets/listening/elllo-kangaroo-road.mp3','audio/mpeg'],'/assets/listening/elllo-going-to-canada.mp3':['assets/listening/elllo-going-to-canada.mp3','audio/mpeg'],'/assets/listening/elllo-beads-business.mp3':['assets/listening/elllo-beads-business.mp3','audio/mpeg'],'/assets/listening/elllo-canada-intro.mp3':['assets/listening/elllo-canada-intro.mp3','audio/mpeg'],'/assets/listening/elllo-new-restaurant.mp3':['assets/listening/elllo-new-restaurant.mp3','audio/mpeg'],'/listening-recordings.js':['listening-recordings.js','text/javascript; charset=utf-8'],'/assets/listening/voa-bottom-line.m4a':['assets/listening/voa-bottom-line.m4a','audio/mp4'],'/assets/listening/voa-on-the-ball.m4a':['assets/listening/voa-on-the-ball.m4a','audio/mp4'],'/':['index.html','text/html; charset=utf-8'],'/index.html':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/speech.js':['speech.js','text/javascript; charset=utf-8'],'/voice-call.js':['voice-call.js','text/javascript; charset=utf-8'],'/voice-utils.js':['voice-utils.js','text/javascript; charset=utf-8'],'/pcm-recorder.js':['pcm-recorder.js','text/javascript; charset=utf-8'],'/listening.js':['listening.js','text/javascript; charset=utf-8'],'/listening-library.js':['listening-library.js','text/javascript; charset=utf-8'],'/styles.css':['styles.css','text/css; charset=utf-8'],'/learning-state.js':['learning-state.js','text/javascript; charset=utf-8'],'/account.js':['account.js','text/javascript; charset=utf-8']};
 const pronunciationCache=new Map();
 export async function lookupPronunciation(word){
  const key=word.toLowerCase();const existing=pronunciationCache.get(key);
@@ -108,7 +111,7 @@ async function readPronunciationAudio(recording){
 export function createAppServer({accountStore,resolveUser,accountOptions,generate=generateCard,pronunciation=lookupPronunciation,audio=readPronunciationAudio,speech=createSpeechCache(),transcribe=transcribeAudio,converse=conversationTurn,assess=assessPronunciation}={}){
  const accounts=accountStore||createAccountStore({filename:process.env.DATABASE_PATH||path.join(root,'.data/daylight.sqlite')});
  const accountHttp=createAccountHttp(accounts,accountOptions);
- let active=0,activeVoice=0;
+ let active=0,activeVoice=0;const libraryJobs=new Map();
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
   res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');
@@ -125,7 +128,23 @@ export function createAppServer({accountStore,resolveUser,accountOptions,generat
     if(user.mustChangePassword)throw accountError('Set a new password to continue.',428,'PASSWORD_CHANGE_REQUIRED');
     if(req.method==='POST'){accounts.rate('api-minute:'+user.id,60,60*1000);accounts.rate('api-day:'+user.id,600,24*60*60*1000);}
    }
-   if(url.pathname==='/api/voice/config'&&req.method==='GET')return json(200,{conversation:Boolean(process.env.DEEPSEEK_API_KEY),assessment:assessmentConfigured(),recognition:'turn-based',voice:'DeepSeek Stella'});
+   if(url.pathname==='/api/word-library'&&req.method==='GET')return json(200,catalogue);
+   const libraryMatch=/^\/api\/word-library\/(cefrj16-[a-f0-9]{16})$/.exec(url.pathname);
+   if(libraryMatch&&['GET','POST'].includes(req.method)){
+    const entry=libraryEntry(libraryMatch[1]);if(!entry)return json(404,{error:'This library word was not found.'});
+    const cached=accounts.readLibraryCard(entry.id);if(req.method==='GET')return json(200,{entry,card:cached,cached:Boolean(cached)});
+    if(!req.headers['content-type']?.startsWith('application/json'))return json(415,{error:'Expected a JSON request.'});
+    let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>4096)return json(413,{error:'Request is too large.'});}
+    try{const body=JSON.parse(raw);if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)throw Error();}catch{return json(400,{error:'Send an empty JSON object to prepare a library card.'});}
+    if(cached)return json(200,{entry,card:cached,cached:true});
+    let job=libraryJobs.get(entry.id);
+    if(!job){
+     if(libraryJobs.size>=3)return json(429,{error:'A few word cards are loading. Please try again shortly.'});
+     job=(async()=>{const card=validateCard(await generate(libraryPrompt(entry)));if(card.pos!==entry.pos||!card.zh.trim()||!card.usage.trim())throw Object.assign(Error('The word card did not match this part of speech. Please try again.'),{status:502});accounts.writeLibraryCard(entry.id,card);return card;})();libraryJobs.set(entry.id,job);
+    }
+    try{return json(200,{entry,card:await job,cached:false});}catch(error){return json(error.status||502,{error:'The learning card could not be prepared. Please try again.',code:error.code||'LIBRARY_CARD_FAILED'});}finally{if(libraryJobs.get(entry.id)===job)libraryJobs.delete(entry.id);}
+   }
+   if(url.pathname==='/api/voice/config'&&req.method==='GET')return json(200,{provider:'doubao',conversation:doubaoConfigured(),feedback:Boolean(process.env.DEEPSEEK_API_KEY),assessment:false,recognition:'realtime',voice:'Doubao · Stella'});
    if(['/api/voice/transcribe','/api/voice/conversation','/api/voice/assessment'].includes(url.pathname)&&req.method==='POST'){
     if(activeVoice>=3)return json(429,{error:'A few voice requests are already loading. Please try again shortly.'});
     const isAudio=url.pathname.endsWith('/transcribe');
@@ -140,7 +159,7 @@ export function createAppServer({accountStore,resolveUser,accountOptions,generat
     if(!req.headers['content-type']?.startsWith('application/json'))return json(415,{error:'Expected speech text as JSON.'});
     let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>8192)return json(413,{error:'The text is too long to read aloud.'});}
     let input;try{input=JSON.parse(raw);}catch{return json(400,{error:'Could not read the speech request.'});}
-    const clip=await speech(validateSpeechRequest(input));res.writeHead(200,{'Content-Type':clip.type,'Content-Length':clip.bytes.length,'X-Daylight-Voice':'DeepSeek Stella','X-Daylight-AI-Audio':'true'});return res.end(clip.bytes);
+    const clip=await speech(validateSpeechRequest(input));res.writeHead(200,{'Content-Type':clip.type,'Content-Length':clip.bytes.length,'X-Daylight-Voice':clip.voice||'English AI voice','X-Daylight-AI-Audio':'true'});return res.end(clip.bytes);
    }
    if(req.method==='GET'&&['/api/pronunciation','/api/pronunciation/audio'].includes(url.pathname)){
     const word=url.searchParams.get('word')||'';
@@ -174,10 +193,11 @@ export function createAppServer({accountStore,resolveUser,accountOptions,generat
    res.writeHead(200,headers);res.end(req.method==='HEAD'?undefined:content);
   }catch(error){json(error.status||502,{error:error.name==='TimeoutError'?'The AI took too long. Your word is saved; please try again.':error.status?error.message:'The connection failed. Please try again.',...(error.code?{code:error.code}:{})});}
  });
+ attachDoubaoRealtime(server,{accounts,accountHttp,resolveUser});
  server.on('close',()=>accounts.close());return server;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const port=Number(process.env.PORT)||4173;
  const config=providerConfig();
- createAppServer().listen(port,process.env.HOST||'127.0.0.1',()=>console.log(`Daylight is ready at http://127.0.0.1:${port}\nAutomatic word cards: ${config.provider} · ${config.key?'configured':'needs an API key in .env.local'}`));
+ createAppServer().listen(port,process.env.HOST||'127.0.0.1',()=>console.log(`Speaki is ready at http://127.0.0.1:${port}\nAutomatic word cards: ${config.provider} · ${config.key?'configured':'needs an API key in .env.local'}`));
 }

@@ -13,6 +13,7 @@ function setup({microphone}={}){
  globalThis.Audio=class{constructor(){this.onended=null;}async play(){setTimeout(()=>this.onended?.(),10);}pause(){}};
  const requests=[];globalThis.fetch=async(url,options)=>{
   requests.push(url);
+  if(url==='/api/voice/config')return Response.json({provider:'deepseek',conversation:true});
   if(url==='/api/speech')return new Response(new Blob([Buffer.alloc(44)],{type:'audio/wav'}));
   if(url==='/api/voice/transcribe')return Response.json({text:'I am work on a new feature.'});
   if(url==='/api/voice/conversation'){const body=JSON.parse(options.body);assert.equal(body.text,'I am work on a new feature.');return Response.json({reply:'What problem does it solve?',correction:{original:'I am work',better:'I am working',why:'Use working.'},practice:null,feedbackBasis:'transcript'});}
@@ -31,8 +32,8 @@ test('a synthetic microphone turn is transcribed, answered aloud, and microphone
 });
 test('hanging up while microphone permission is pending releases a late stream and never starts a call',async()=>{
  let grant;const fixture=setup({microphone:()=>new Promise(resolve=>{grant=resolve;})});const call=new globalThis.DaylightVoiceCall();
- const starting=call.start();call.end(false);grant(fixture.stream);await starting;
- assert.equal(fixture.stopped(),1);assert.equal(call.active,false);assert.equal(fixture.requests.length,0);
+ const starting=call.start();await until(()=>grant);call.end(false);grant(fixture.stream);await starting;
+ assert.equal(fixture.stopped(),1);assert.equal(call.active,false);assert.deepEqual(fixture.requests,['/api/voice/config']);
 });
 
 test('clearing an account removes voice transcripts, recordings and feedback and releases microphone resources',async()=>{

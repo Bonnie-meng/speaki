@@ -1,13 +1,14 @@
-# Speaki / Daylight
+# Speaki · 言芽
 
-A simple English learning website for vocabulary, listening and spoken practice. The current interface is called Daylight; the planned public domain is **speaki.cn**. This repository is the application source, not a deployed service.
+A simple English learning website for vocabulary, listening and spoken practice. **言芽** means a language sprout: small daily practice growing into confident expression. The logo combines a conversation bubble and a new leaf. The planned public domain is **speaki.cn**. This repository is the application source, not a deployed service.
 
 ## Features
 
-- Vocabulary cards with pronunciation, meanings, everyday phrases, examples, and spaced review. Group by date added and filter by today, recent days, or a specific date.
+- Separate **My words** and **Word library** collections. Personal vocabulary supports date groups, search and date/progress filters.
+- CEFR-J A1–B2 library: 7,801 word/POS entries, level selection, search, progress filtering, batches of up to 20 words, private review dates and mastery records. Public learning cards are generated on demand and cached once; explicit collection into My words is optional. See [content attribution](NOTICE.md).
 - Listening library: 18 lessons, including 10 original human recordings from VOA and ELLLO. Filter by scene, level, source, or speaker origin. See [content attribution](NOTICE.md).
 - Adjustable playback, hidden transcripts, approximate sentence following, word lookup, saved words, cumulative listening time and resume positions.
-- Turn-based voice conversations for daily life, product work, and IELTS warm-ups. Optional Azure pronunciation assessment.
+- Doubao Seeduplex full-duplex voice conversations for daily life, product work, and IELTS warm-ups, with streaming captions, natural interruption, mute and optional transcript-based expression feedback.
 - Mainland China (+86) phone identifier and password sign-up. No SMS service is required; phone ownership is not verified.
 - Seven-day fixed sessions, per-account learning storage, account password changes, and administrator-assisted resets.
 - A compact interface, consistent dropdown controls, desktop lists and mobile layouts.
@@ -26,6 +27,20 @@ Add your API credentials to `.env.local` locally. Do not commit credentials. Ope
 
 Phone identifiers accept only mainland China mobile numbers. New passwords require 6–8 letters or numbers (A–Z, a–z, 0–9). Existing passwords still work at sign-in. The sign-in cookie is HttpOnly, SameSite=Lax and expires after seven days; public deployment requires HTTPS and adds Secure cookies.
 
+## Doubao real-time voice setup
+
+1. In [Doubao Voice console](https://console.volcengine.com/speech/new/setting/apikeys?projectName=default), activate **Doubao real-time speech 3.0 / Seeduplex** and create a service API Key. A DeepSeek key or an Ark text-model key is not interchangeable with this credential.
+2. Add `DOUBAO_REALTIME_API_KEY=...` to `.env.local` on the server, then restart the app. Never paste the key into browser code, notes, screenshots or Git. An optional `DOUBAO_REALTIME_VOICE` selects a compatible voice; default is Vivi 2.0.
+3. Open Speaking and start a call. Microphone access requires HTTPS or localhost and a browser with AudioWorklet support. Headphones help prevent playback being picked up by the microphone.
+
+The browser streams continuous 16 kHz, 16-bit mono PCM through an authenticated same-origin WebSocket. The server connects to the fixed official Seeduplex endpoint, authenticates using `X-Api-Key`, creates a new session per call, and relays only normalised audio/text events. Output is 24 kHz PCM, played progressively. When Doubao is configured, vocabulary and sentence playback also use its speech output, wrapped as a correctly labelled 24 kHz WAV; the legacy DeepSeek speech path is used only without a Doubao key. The session configuration follows the [official Seeduplex API and Web demo](https://docs.volcengine.com/docs/doubao-voice/end-to-end-real-time-voice-full-duplex-version?lang=zh). No upstream dialog ID or API Key is sent to the browser or reused between users.
+
+Calls allow one live session per user, up to three total, with a 30-minute cap, origin/session checks, bounded audio frames, backpressure limits and disconnect cleanup. A reverse proxy must support WebSocket upgrades (Caddy does). The UI does not silently fall back to the old turn-based service when Doubao is unconfigured. Without a valid key, setup is reported before requesting microphone access.
+
+During calls, audio including speech captured while the AI speaks goes to Doubao. Recognised text goes to DeepSeek for a separate expression-feedback panel when configured; this background request does not generate the spoken reply. Audio stays transient in the app and is not written to learning notes. Provider-side retention is governed by the provider's terms. Saving a conversation to private notes remains an explicit user action. Natural conversational coaching is not phoneme-level pronunciation assessment or an IELTS score; the old optional Azure assessment API remains available for legacy clients but is not used in the Doubao UI.
+
+The integration is covered by mocked-provider tests. Live provider authentication, voice quality, interruption accuracy and end-to-end latency still need testing with an activated account.
+
 ## Administrator setup
 
 Register the intended administrator through the website first, then run this on the server, using that account's number:
@@ -38,13 +53,25 @@ The number above is an example. No account becomes an administrator automaticall
 
 ## Data storage and existing users
 
-SQLite stores users, hashed sessions, per-user learning JSON, revisions, and administrator reset events in `.data/daylight.sqlite`. The `.data` directory must be on persistent storage and backed up. It is never served by the web server or included in Git.
+SQLite stores users, hashed sessions, per-user learning JSON (including private library progress), revisions, shared public word-library cards, and administrator reset events in `.data/daylight.sqlite`. The `.data` directory must be on persistent storage and backed up. It is never served by the web server or included in Git.
 
 Learning data is fetched from the server for the current account. New learning data is not stored in a shared browser-local collection. Switching accounts clears the visible collection and in-memory caches; server requests use the authenticated user's ID. Revision checks prevent a stale tab from silently overwriting newer data.
 
-The **Account → Import previous browser data** action can move an old local collection into the signed-in account. It downloads a backup of the current account first, requires an explicit import action, and removes the old shared browser collection only after the server confirms the import. Never import another person's collection. JSON backup import/export is available under Account → Data backup.
+Learning records are saved automatically to the signed-in account. Manual backup import/export and old browser-data import are not exposed in the interface.
 
-Saving is debounced and shows its status in the header. Failed saves can be retried; conflicting saves offer a local backup before reloading. Listening counts real elapsed playback time, including replays; pauses, stalls and seeking do not add time. A browser process forcibly terminated before the last save may lose the latest few seconds.
+Saving is automatic and debounced; only failures or conflicts show a header status. Failed saves can be retried; conflicting saves offer a local backup before reloading. Listening counts real elapsed playback time, including replays; pauses, stalls and seeking do not add time. A browser process forcibly terminated before the last save may lose the latest few seconds.
+
+## Graded vocabulary data
+
+The source catalogue is included in `data/cefrj-a1-b2.json` and served through authenticated `GET /api/word-library`. Browsing and progress storage do not need an AI key. Opening an uncached entry requests its original AI learning card; this uses the configured provider and can incur API charges. `GET /api/word-library/:id` never generates content, while `POST` with an empty JSON object prepares and validates a shared card. Public cards contain no personal prompts, notes or progress. Generation is deduplicated across users and survives restart in `word_library_cards`.
+
+Private `learning_states.data.library` stores the user's selected level and per-entry status, reviews and due dates. Existing collections load without this field; new accounts start with empty My words. A library word only enters My words when the user adds it. Linked words synchronize that same user's review state to avoid duplicate due counts. Switching accounts clears the library session and rejects late responses.
+
+To reproduce the catalogue, download the official source ZIP linked in [NOTICE.md](NOTICE.md), then run the standard-library-only importer:
+
+```sh
+python3 scripts/import-cefrj.py /path/to/CEFRJ_wordlist_ver1.6.zip
+```
 
 ## Public deployment
 
@@ -78,7 +105,7 @@ Tests cover account isolation, session expiry, permission boundaries, password r
 ## Limitations
 
 - No SMS verification, automatic password recovery, or email service.
-- Voice conversations are turn-based, with recognition and response latency; pronunciation assessment requires a separate Azure Speech resource.
+- Live voice calls require an activated Doubao Seeduplex service and API credit. Voice quality and latency depend on network, microphone and provider behavior; no professional pronunciation score is inferred from normal conversation.
 - ELLLO subtitle boundaries are approximate, derived from source text, recognition alignment and pauses. Country labels describe speaker backgrounds, not all accents within a country.
 - British Council lessons open on their original site and do not contribute to in-app listening time.
 - The included ELLLO content is for non-commercial educational use; it is not covered by the code's MIT license. See [NOTICE.md](NOTICE.md).
@@ -86,3 +113,7 @@ Tests cover account isolation, session expiry, permission boundaries, password r
 ## License
 
 Application code: [MIT](LICENSE). Third-party learning content: [separate conditions and credits](NOTICE.md).
+
+## Maintainer workflow
+
+Keep changes local by default. Commit or push updates to GitHub only when the owner explicitly asks to update Git.

@@ -12,3 +12,6 @@ daylight-backup-*.json
 *.sqlite-wal
 *.sqlite-shm
 enrichments.json
+
+# Generated offline test exports (embedded media); keep source changes in Git.
+previews/

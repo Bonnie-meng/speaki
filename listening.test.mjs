@@ -71,7 +71,7 @@ test('recorded lessons play original local audio without requesting AI speech an
 test('free sources retain attribution and external lessons remain original-site links',()=>{
  const {player}=setup();const recorded=player.lessons.filter(l=>l.source.kind==='recorded');assert.ok(recorded.length>=2);
  for(const lesson of recorded){assert.ok(lesson.source.credit);assert.ok(lesson.source.licenseUrl);let end=0;for(const cue of lesson.segments){assert.ok(cue.start>=end);assert.ok(cue.end>cue.start);assert.ok(cue.text.trim());end=cue.end;}assert.equal(lesson.script,lesson.segments.map(s=>s.text).join(' '));}
- assert.equal(globalThis.DaylightListeningExternal.length,4);assert.match(player.externalView(),/Daylight’s player controls/);assert.match(player.externalView(),/target="_blank" rel="noopener noreferrer"/);
+ assert.equal(globalThis.DaylightListeningExternal.length,4);assert.match(player.externalView(),/Speaki’s player controls/);assert.match(player.externalView(),/target="_blank" rel="noopener noreferrer"/);
 });
 
 test('library filters and ordering let users choose any matching lesson',()=>{

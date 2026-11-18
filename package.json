@@ -5,11 +5,12 @@
   "description": "An English learning space with vocabulary, listening, speaking, and private user accounts.",
   "scripts": {
     "dev": "node server.mjs",
-    "check": "node --check app.js && node --check server.mjs && node --check speech.js && node --check natural-speech.mjs && node --check voice-agent.mjs && node --check voice-call.js && node --check voice-utils.js && node --check pcm-recorder.js && node --check listening.js && node --check listening-library.js && node --check listening-recordings.js && node --check accounts.mjs && node --check accounts-http.mjs && node --check account.js && node --check learning-state.js && node --check admin.mjs",
-    "test": "node --test server.test.mjs speech.test.mjs natural-speech.test.mjs voice-agent.test.mjs voice-call.test.mjs listening.test.mjs accounts.test.mjs",
+    "check": "node --check doubao-speech.mjs && node --check doubao-realtime.mjs && node --check doubao-call.js && node --check library-progress.js && node --check word-library.js && node --check word-catalog.mjs && node --check select-controls.js && node --check app.js && node --check server.mjs && node --check speech.js && node --check natural-speech.mjs && node --check voice-agent.mjs && node --check voice-call.js && node --check voice-utils.js && node --check pcm-recorder.js && node --check listening.js && node --check listening-library.js && node --check listening-recordings.js && node --check accounts.mjs && node --check accounts-http.mjs && node --check account.js && node --check learning-state.js && node --check admin.mjs",
+    "test": "node --test doubao-speech.test.mjs doubao-realtime.test.mjs server.test.mjs speech.test.mjs natural-speech.test.mjs voice-agent.test.mjs voice-call.test.mjs listening.test.mjs accounts.test.mjs word-library.test.mjs",
     "admin": "node admin.mjs"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1"
+    "better-sqlite3": "^12.11.1",
+    "ws": "^8.23.0"
   }
 }
